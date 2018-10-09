@@ -2,8 +2,7 @@ package blockchain
 
 import (
     "bytes"
-	"crypto/sha256"
-	"encoding/gob"
+    "crypto/sha256"
 )
 
 // Block is a basic block within a blockchain
@@ -13,17 +12,18 @@ type Block struct {
 	data     string
 }
 
-// Computes the hash of the block
+// Hash function, computes the hash of the block
 func (block Block) Hash() []byte {
-	hash := sha256.New()
-    
-    var buf bytes.Buffer
-    gob.NewEncoder(&buf).Encode(block)
-    
-	hash.Write(buf.Bytes())
+    hash := sha256.New()
+
+    var buffer bytes.Buffer
+    buffer.WriteString(block.data)
+    buffer.WriteString(string(block.id))
+    buffer.Write(block.prevHash)
+
+    hash.Write(buffer.Bytes())
     return hash.Sum(nil)
 }
-
 
 // Blockchain is a chain of blocks
 type Blockchain []Block
