@@ -1,4 +1,4 @@
-package blockchain
+package storage
 
 import (
     "bytes"
@@ -7,9 +7,9 @@ import (
 
 // Block is a basic block within a blockchain
 type Block struct {
-	id       int
-	prevHash []byte
-	data     string
+    id       int
+    prevHash []byte
+    data     string
 }
 
 // Hash function, computes the hash of the block
@@ -37,7 +37,7 @@ func (blockchain *Blockchain) AddBlock(data string) {
         hash = (*blockchain)[blockHeight - 1].Hash()
     }
     
-	*blockchain = append(*blockchain, Block{len(*blockchain), hash, data})
+    *blockchain = append(*blockchain, Block{len(*blockchain), hash, data})
 }
 
 // IsValid Checks if the blockchain is valid.
