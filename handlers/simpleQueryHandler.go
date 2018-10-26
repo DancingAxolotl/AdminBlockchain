@@ -11,8 +11,16 @@ type SimpleQueryHandler struct {
 	Sp storage.StorageProvider
 }
 
-//Load loads the chain state
+// NewHandler creates a new handler for the specified path
+func NewHandler(path string) *SimpleQueryHandler {
+	var handler SimpleQueryHandler
+	handler.Load(path)
+	return &handler
+}
+
+//Load loads the chain state from the specified path
 func (handler *SimpleQueryHandler) Load(path string) {
+	handler.Close()
 	handler.Sp.LoadChain(path)
 }
 
@@ -40,6 +48,9 @@ func (handler *SimpleQueryHandler) ExecuteTransaction(statement string, params .
 
 //Close saves the state database and closes the connection
 func (handler *SimpleQueryHandler) Close() {
-	handler.Sp.UpdateChainState()
-	handler.Sp.StateDb.Close()
+	if handler.Sp.ChainDb.IsOpen() {
+		handler.Sp.UpdateChainState()
+		handler.Sp.ChainDb.Close()
+		handler.Sp.StateDb.Close()
+	}
 }

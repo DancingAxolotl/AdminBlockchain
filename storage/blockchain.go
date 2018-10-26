@@ -7,9 +7,9 @@ import (
 
 // Block is a basic block within a blockchain
 type Block struct {
-	id       int
-	prevHash []byte
-	data     string
+	Id       int
+	PrevHash []byte
+	Data     string
 }
 
 // Hash function, computes the hash of the block
@@ -17,9 +17,9 @@ func (block Block) Hash() []byte {
 	hash := sha256.New()
 
 	var buffer bytes.Buffer
-	buffer.WriteString(block.data)
-	buffer.WriteString(string(block.id))
-	buffer.Write(block.prevHash)
+	buffer.WriteString(block.Data)
+	buffer.WriteString(string(block.Id))
+	buffer.Write(block.PrevHash)
 
 	hash.Write(buffer.Bytes())
 	return hash.Sum(nil)
@@ -36,7 +36,7 @@ func (blockchain *Blockchain) AddBlock(data string) {
 		hash = (*blockchain)[blockHeight-1].Hash()
 	}
 
-	*blockchain = append(*blockchain, Block{len(*blockchain), hash, data})
+	*blockchain = append(*blockchain, Block{blockHeight + 1, hash, data})
 }
 
 //InsertBlock attempts to insert a block at the end of the blokchain. It doesn't check if the hash of the previous block is valid.
@@ -54,14 +54,14 @@ func (blockchain *Blockchain) IsValid() bool {
 	lastBlock := (*blockchain)[0]
 
 	// check if first block is valid
-	if len(lastBlock.prevHash) != 1 || lastBlock.prevHash[0] != 0 {
+	if len(lastBlock.PrevHash) != 1 || lastBlock.PrevHash[0] != 0 {
 		return false
 	}
 
 	for i := 1; i < blockHeight; i++ {
 		nextBlock := (*blockchain)[i]
 		hash := lastBlock.Hash()
-		for j, item := range nextBlock.prevHash {
+		for j, item := range nextBlock.PrevHash {
 			if item != hash[j] {
 				return false
 			}

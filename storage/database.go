@@ -12,32 +12,37 @@ type Database struct {
 	database *sql.DB
 }
 
-func (db Database) OpenDb(path string) {
+func (db *Database) OpenDb(path string) {
 	database, err := sql.Open("sqlite3", path)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	db.database = database
 }
 
-func (db Database) IsOpen() bool {
+func (db *Database) Close() {
+	db.database.Close()
+}
+
+func (db *Database) IsOpen() bool {
 	return db.database != nil
 }
 
-func (db Database) Transact(statement string, params ...interface{}) error {
+func (db *Database) Transact(statement string, params ...interface{}) error {
 	if !db.IsOpen() {
-		return errors.New("Database not loaded.")
+		return errors.New("database not loaded")
 	}
-	_, err := db.database.Exec(statement, params)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	_, err := db.database.Exec(statement, params...)
+
+	return err
 }
 
-func (db Database) Query(query string) (*sql.Rows, error) {
+func (db *Database) Query(query string) (*sql.Rows, error) {
 	if db.database == nil {
-		return nil, errors.New("Database not loaded.")
+		return nil, errors.New("database not loaded")
 	}
-	return db.database.Query(query)
+	rows, err := db.database.Query(query)
+	return rows, err
 }
