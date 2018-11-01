@@ -1,4 +1,4 @@
-package main
+package local
 
 import (
 	"AdminBlockchain/handlers"
@@ -11,7 +11,7 @@ import (
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
-	handler := handlers.NewHandler("./")
+	handler := handlers.NewSimpleHandler("./")
 	defer handler.Close()
 
 	fmt.Print("Available commands: query, execute, state, help, exit\n")

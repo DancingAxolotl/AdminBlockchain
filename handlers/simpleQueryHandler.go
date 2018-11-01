@@ -23,7 +23,7 @@ type SimpleHandlerResponce struct {
 }
 
 // NewHandler creates a new handler for the specified path
-func NewHandler(path string) *SimpleQueryHandler {
+func NewSimpleHandler(path string) *SimpleQueryHandler {
 	var handler SimpleQueryHandler
 	handler.Load(path)
 	return &handler
