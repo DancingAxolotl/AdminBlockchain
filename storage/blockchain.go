@@ -7,7 +7,7 @@ import (
 
 // Block is a basic block within a blockchain
 type Block struct {
-	Id       int
+	ID       int
 	PrevHash []byte
 	Data     string
 }
@@ -18,7 +18,7 @@ func (block Block) Hash() []byte {
 
 	var buffer bytes.Buffer
 	buffer.WriteString(block.Data)
-	buffer.WriteString(string(block.Id))
+	buffer.WriteString(string(block.ID))
 	buffer.Write(block.PrevHash)
 
 	hash.Write(buffer.Bytes())

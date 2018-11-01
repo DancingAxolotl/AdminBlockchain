@@ -22,7 +22,7 @@ func TestAddBlock(t *testing.T) {
 	blockchain.AddBlock("hello")
 	lastBlock := blockchain[len(blockchain)-1]
 
-	assertEq(t, lastBlock.data, "hello")
+	assertEq(t, lastBlock.Data, "hello")
 }
 
 // Check if the previous hash of first block is 0
@@ -31,7 +31,7 @@ func TestAddFirstBlock(t *testing.T) {
 	blockchain.AddBlock("hello")
 	lastBlock := blockchain[len(blockchain)-1]
 
-	assertArrayEq(t, lastBlock.prevHash, []byte{0})
+	assertArrayEq(t, lastBlock.PrevHash, []byte{0})
 }
 
 // Check if the previous hash is equal to the hash of previous block
@@ -43,7 +43,7 @@ func TestAddBlockHash(t *testing.T) {
 	blockchain.AddBlock("data")
 	lastBlock := blockchain[len(blockchain)-1]
 
-	assertArrayEq(t, lastBlock.prevHash, firstBlock.Hash())
+	assertArrayEq(t, lastBlock.PrevHash, firstBlock.Hash())
 }
 
 // Check if the previous hash is equal to the hash of previous block
@@ -61,7 +61,7 @@ func TestInvalidBlockchain(t *testing.T) {
 	blockchain.AddBlock("hello")
 	blockchain.AddBlock("data")
 
-	blockchain[len(blockchain)-2].data = "fake"
+	blockchain[len(blockchain)-2].Data = "fake"
 
 	assertEq(t, blockchain.IsValid(), false)
 }
@@ -72,7 +72,7 @@ func TestInsertOneBlock(t *testing.T) {
 	blockchain.InsertBlock(firstBlock)
 
 	lastBlock := blockchain[len(blockchain)-1]
-	assertEq(t, lastBlock.data, "first")
+	assertEq(t, lastBlock.Data, "first")
 }
 
 func TestInsertValidBlocks(t *testing.T) {

@@ -4,15 +4,15 @@ import (
 	"log"
 )
 
-//StorageProvider handles storing and loading blockchain data from the database
-type StorageProvider struct {
+//Provider handles storing and loading blockchain data from the database
+type Provider struct {
 	Chain   Blockchain
 	ChainDb Database
 	StateDb Database
 }
 
 //LoadChain loads the chain state from the database.
-func (sp *StorageProvider) LoadChain(DbPath string) {
+func (sp *Provider) LoadChain(DbPath string) {
 	sp.ChainDb.OpenDb(DbPath + "/blockchain.db")
 	sp.StateDb.OpenDb(DbPath + "/storage.db")
 
@@ -41,7 +41,7 @@ func (sp *StorageProvider) LoadChain(DbPath string) {
 }
 
 //UpdateChainState writes the current blockchain into the database
-func (sp *StorageProvider) UpdateChainState() {
+func (sp *Provider) UpdateChainState() {
 	rows, err := sp.ChainDb.Query("SELECT MAX(id) FROM ChainState")
 	if err != nil {
 		log.Fatal(err)
@@ -54,7 +54,7 @@ func (sp *StorageProvider) UpdateChainState() {
 	rows.Close()
 
 	for _, item := range sp.Chain[count:] {
-		err = sp.ChainDb.Transact("INSERT INTO ChainState (id, hash, data) VALUES (?, ?, ?)", item.Id, item.PrevHash, item.Data)
+		err = sp.ChainDb.Transact("INSERT INTO ChainState (id, hash, data) VALUES (?, ?, ?)", item.ID, item.PrevHash, item.Data)
 		if err != nil {
 			log.Print(err)
 		}

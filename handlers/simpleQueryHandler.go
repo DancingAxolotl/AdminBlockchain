@@ -7,19 +7,19 @@ import (
 
 // SimpleQueryHandler a pass-through for acessing the database. Provides simple logic for storing each executed transaction on the blockchain.
 type SimpleQueryHandler struct {
-	Sp storage.StorageProvider
+	Sp storage.Provider
 }
 
 // SimpleHandlerRequest request parameters for the SimpleQueryHandler
 type SimpleHandlerRequest struct {
-	query  string
-	params []interface{}
+	Query  string
+	Params []interface{}
 }
 
 // SimpleHandlerResponce responce from the SimpleQueryHandler
 type SimpleHandlerResponce struct {
-	columns []string
-	rows    [][]string
+	Columns []string
+	Rows    [][]string
 }
 
 // NewHandler creates a new handler for the specified path
@@ -37,7 +37,8 @@ func (handler *SimpleQueryHandler) Load(path string) {
 
 //ExecuteQuery performs a query on the database
 func (handler *SimpleQueryHandler) ExecuteQuery(request SimpleHandlerRequest, responce *SimpleHandlerResponce) error {
-	rows, err := handler.Sp.StateDb.Query(request.query)
+	rows, err := handler.Sp.StateDb.Query(request.Query)
+	defer rows.Close()
 	if err != nil {
 		return err
 	}
@@ -49,10 +50,10 @@ func (handler *SimpleQueryHandler) ExecuteQuery(request SimpleHandlerRequest, re
 
 	vals := make([]interface{}, len(cols))
 	raw := make([][]byte, len(cols))
-	(*responce).columns = make([]string, len(cols))
+	(*responce).Columns = make([]string, len(cols))
 	for i := 0; i < len(cols); i++ {
 		vals[i] = &raw[i]
-		(*responce).columns[i] = cols[i]
+		(*responce).Columns[i] = cols[i]
 	}
 
 	for rows.Next() {
@@ -63,7 +64,7 @@ func (handler *SimpleQueryHandler) ExecuteQuery(request SimpleHandlerRequest, re
 			text[i] = string(item)
 		}
 
-		(*responce).rows = append((*responce).rows, text)
+		(*responce).Rows = append((*responce).Rows, text)
 	}
 
 	return nil
@@ -72,13 +73,13 @@ func (handler *SimpleQueryHandler) ExecuteQuery(request SimpleHandlerRequest, re
 //ExecuteTransaction performs a transaction and stores it in the blockchain
 func (handler *SimpleQueryHandler) ExecuteTransaction(request SimpleHandlerRequest, responce *bool) error {
 	*responce = false
-	err := handler.Sp.StateDb.Transact(request.query, request.params...)
+	err := handler.Sp.StateDb.Transact(request.Query, request.Params...)
 	if err != nil {
 		return err
 	}
 
-	txData := request.query
-	for _, param := range request.params {
+	txData := request.Query
+	for _, param := range request.Params {
 		txData += fmt.Sprintf(";%v", param)
 	}
 

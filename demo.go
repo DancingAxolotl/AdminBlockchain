@@ -3,7 +3,6 @@ package main
 import (
 	"AdminBlockchain/handlers"
 	"bufio"
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -36,7 +35,7 @@ func main() {
 			fmt.Print(" Block id      | Previous hash    | Block hash       | Data \n")
 			for _, item := range handler.Sp.Chain {
 				fmt.Printf(" %-14d|%14.14s ...|%14.14s ...| %v\n",
-					item.Id,
+					item.ID,
 					fmt.Sprintf("% x", item.PrevHash),
 					fmt.Sprintf("% x", item.Hash()),
 					item.Data)
@@ -45,18 +44,19 @@ func main() {
 		case "query":
 			var query string
 			fmt.Sscanf(input, "query%q", &query)
-			rows, err := handler.ExecuteQuery(query)
+			var resp handlers.SimpleHandlerResponce
+			err := handler.ExecuteQuery(handlers.SimpleHandlerRequest{Query: query, Params: []interface{}{}}, &resp)
 			if err == nil {
-				printTable(rows)
+				printTable(resp)
 			} else {
 				log.Fatal(err)
 			}
-			rows.Close()
 
 		case "execute":
 			var query string
 			fmt.Sscanf(input, "execute%q", &query)
-			err := handler.ExecuteTransaction(query)
+			var success bool
+			err := handler.ExecuteTransaction(handlers.SimpleHandlerRequest{Query: query, Params: []interface{}{}}, &success)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -69,25 +69,9 @@ func main() {
 
 }
 
-func printTable(rows *sql.Rows) {
-	cols, err := rows.Columns()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("%v\n", strings.Join(cols, "\t|"))
-	vals := make([]interface{}, len(cols))
-	raw := make([][]byte, len(cols))
-	for i := 0; i < len(cols); i++ {
-		vals[i] = &raw[i]
-	}
-
-	for rows.Next() {
-		rows.Scan(vals...)
-		text := make([]string, len(cols))
-		for i, item := range raw {
-			text[i] = string(item)
-		}
-		fmt.Printf("%v\n", strings.Join(text, "\t|"))
+func printTable(resp handlers.SimpleHandlerResponce) {
+	fmt.Printf("%v\n", strings.Join(resp.Columns, "\t|"))
+	for _, row := range resp.Rows {
+		fmt.Printf("%v\n", strings.Join(row, "\t|"))
 	}
 }
