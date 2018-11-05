@@ -3,10 +3,7 @@ package main
 import (
 	"AdminBlockchain/handlers"
 	"AdminBlockchain/network"
-	"bufio"
-	"fmt"
 	"log"
-	"os"
 )
 
 type TestHandler int
@@ -17,33 +14,16 @@ func (th *TestHandler) Test(request Stub, responce *Stub) error {
 	return nil
 }
 
-func start(np *network.ServerNetworkProvider) {
-	np.Start("", "8900")
-}
-
 func main() {
-	reader := bufio.NewReader(os.Stdin)
-
 	np := network.NewServerProvider()
+	defer np.Stop()
+
 	handler := handlers.NewSimpleHandler("./")
+	defer handler.Close()
+
 	np.RegisterHandler(handler)
 	var th TestHandler
 	np.RegisterHandler(&th)
 
-	fmt.Print("Available commands: start, stop, exit\n")
-	var running = true
-	for running {
-		fmt.Print("> ")
-		input, _ := reader.ReadString('\n')
-		var command string
-		fmt.Sscan(input, &command)
-		switch command {
-		case "start":
-			go start(&np)
-		case "stop":
-			np.Stop()
-		case "exit":
-			running = false
-		}
-	}
+	np.Start("", "8900")
 }

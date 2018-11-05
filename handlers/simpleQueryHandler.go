@@ -3,6 +3,7 @@ package handlers
 import (
 	"AdminBlockchain/storage"
 	"fmt"
+	"log"
 )
 
 // SimpleQueryHandler a pass-through for acessing the database. Provides simple logic for storing each executed transaction on the blockchain.
@@ -37,6 +38,7 @@ func (handler *SimpleQueryHandler) Load(path string) {
 
 //ExecuteQuery performs a query on the database
 func (handler *SimpleQueryHandler) ExecuteQuery(request SimpleHandlerRequest, responce *SimpleHandlerResponce) error {
+	log.Printf("ExecuteQuery called with request: %v", request.Query)
 	rows, err := handler.Sp.StateDb.Query(request.Query)
 	defer rows.Close()
 	if err != nil {
@@ -72,6 +74,7 @@ func (handler *SimpleQueryHandler) ExecuteQuery(request SimpleHandlerRequest, re
 
 //ExecuteTransaction performs a transaction and stores it in the blockchain
 func (handler *SimpleQueryHandler) ExecuteTransaction(request SimpleHandlerRequest, responce *bool) error {
+	log.Printf("ExecuteTransaction called with request %v", request.Query)
 	*responce = false
 	err := handler.Sp.StateDb.Transact(request.Query, request.Params...)
 	if err != nil {
@@ -91,6 +94,7 @@ func (handler *SimpleQueryHandler) ExecuteTransaction(request SimpleHandlerReque
 //Close saves the state database and closes the connection
 func (handler *SimpleQueryHandler) Close() {
 	if handler.Sp.ChainDb.IsOpen() {
+		log.Print("Handler closing...")
 		handler.Sp.UpdateChainState()
 		handler.Sp.ChainDb.Close()
 		handler.Sp.StateDb.Close()

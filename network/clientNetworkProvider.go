@@ -1,7 +1,7 @@
 package network
 
 import (
-	"log"
+	"AdminBlockchain/utils"
 	"net/rpc"
 )
 
@@ -14,9 +14,7 @@ type ClientNetworkProvider struct {
 func (np *ClientNetworkProvider) Start(addr string, port string) {
 	var err error
 	np.client, err = rpc.DialHTTP("tcp", addr+":"+port)
-	if err != nil {
-		log.Fatal("failed to connect:", err)
-	}
+	utils.LogErrorF(err)
 }
 
 // Stop stops the server
