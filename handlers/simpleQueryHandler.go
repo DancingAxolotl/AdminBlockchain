@@ -4,6 +4,8 @@ import (
 	"AdminBlockchain/storage"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 )
 
 // SimpleQueryHandler a pass-through for acessing the database. Provides simple logic for storing each executed transaction on the blockchain.
@@ -23,17 +25,38 @@ type SimpleHandlerResponce struct {
 	Rows    [][]string
 }
 
-// NewHandler creates a new handler for the specified path
+// NewSimpleHandler creates a new handler for the specified path
 func NewSimpleHandler(path string) *SimpleQueryHandler {
 	var handler SimpleQueryHandler
 	handler.Load(path)
 	return &handler
 }
 
+var stateDbPath = "./storage.db"
+
 //Load loads the chain state from the specified path
 func (handler *SimpleQueryHandler) Load(path string) {
 	handler.Close()
 	handler.Sp.LoadChain(path)
+
+	os.Remove(stateDbPath)
+	handler.Sp.StateDb.OpenDb(stateDbPath)
+
+	for _, block := range handler.Sp.Chain {
+		handler.AcceptBlock(block)
+	}
+}
+
+// AcceptBlock at the top of chain
+func (handler *SimpleQueryHandler) AcceptBlock(block storage.Block) {
+	params := strings.Split(block.Data, ";")
+	if len(params) > 1 {
+		args := make([]interface{}, len(params[1:]))
+		for i := range params[1:] {
+			args[i] = params[i]
+		}
+		handler.Sp.StateDb.Transact(params[0], args...)
+	}
 }
 
 //ExecuteQuery performs a query on the database
