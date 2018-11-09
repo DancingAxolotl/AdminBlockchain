@@ -1,7 +1,6 @@
 package network
 
 import (
-	"AdminBlockchain/handlers"
 	"AdminBlockchain/utils"
 	"log"
 	"net"
@@ -27,7 +26,7 @@ func NewServerProvider() ServerNetworkProvider {
 }
 
 // RegisterHandler registers handlers for rpc
-func (np *ServerNetworkProvider) RegisterHandler(handler handlers.IHandler) {
+func (np *ServerNetworkProvider) RegisterHandler(handler interface{}) {
 	np.rpcServer.Register(handler)
 }
 

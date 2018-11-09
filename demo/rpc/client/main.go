@@ -2,6 +2,7 @@ package main
 
 import (
 	"AdminBlockchain/handlers"
+	"AdminBlockchain/handlers/sample"
 	"AdminBlockchain/utils"
 	"bufio"
 	"fmt"
@@ -39,10 +40,12 @@ func main() {
 	defer client.Close()
 
 	reader := bufio.NewReader(os.Stdin)
-	localChainHandler := handlers.NewSimpleHandler("./")
+	localChainHandler := sample.NewSimpleHandler("./")
 	defer localChainHandler.Close()
+	key, err := utils.LoadPublicKey("./public_invalid.pem")
+	utils.LogErrorF(err)
 
-	blockSync := handlers.BlockSyncHandler{QueryHandler: localChainHandler}
+	blockSync := handlers.BlockSyncHandler{StorageProvider: &localChainHandler.Sp, QueryHandlers: []handlers.IHandler{localChainHandler}, SignValidator: key}
 	blockProvider := handlers.RPCBlockProvider{Client: client}
 	syncChan := make(chan bool)
 	go syncClient(&blockSync, &blockProvider, syncChan)
@@ -78,8 +81,8 @@ func main() {
 		case "query":
 			var query string
 			fmt.Sscanf(input, "query%q", &query)
-			var resp handlers.SimpleHandlerResponce
-			err := localChainHandler.ExecuteQuery(handlers.SimpleHandlerRequest{Query: query, Params: []interface{}{}}, &resp)
+			var resp sample.SimpleHandlerResponce
+			err := localChainHandler.ExecuteQuery(sample.SimpleHandlerRequest{Query: query, Params: []interface{}{}}, &resp)
 			if err == nil {
 				printTable(resp)
 			} else {
@@ -90,7 +93,7 @@ func main() {
 			var query string
 			fmt.Sscanf(input, "execute%q", &query)
 			var success bool
-			err := client.Call("SimpleQueryHandler.ExecuteTransaction", handlers.SimpleHandlerRequest{Query: query, Params: []interface{}{}}, &success)
+			err := client.Call("SimpleQueryHandler.ExecuteTransaction", sample.SimpleHandlerRequest{Query: query, Params: []interface{}{}}, &success)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -103,7 +106,7 @@ func main() {
 
 }
 
-func printTable(resp handlers.SimpleHandlerResponce) {
+func printTable(resp sample.SimpleHandlerResponce) {
 	fmt.Printf("%v\n", strings.Join(resp.Columns, "\t|"))
 	for _, row := range resp.Rows {
 		fmt.Printf("%v\n", strings.Join(row, "\t|"))

@@ -4,6 +4,11 @@ import (
 	"log"
 )
 
+var (
+	// StateDbPath path to the state database
+	StateDbPath string
+)
+
 //Provider handles storing and loading blockchain data from the database
 type Provider struct {
 	Chain   Blockchain
@@ -14,6 +19,8 @@ type Provider struct {
 //LoadChain loads the chain state from the database.
 func (sp *Provider) LoadChain(DbPath string) {
 	sp.ChainDb.OpenDb(DbPath + "/blockchain.db")
+	const stateDbName = "/storage.db"
+	StateDbPath = DbPath + stateDbName
 
 	sp.ChainDb.Transact("CREATE TABLE IF NOT EXISTS ChainState (id integer, hash blob, data text)")
 

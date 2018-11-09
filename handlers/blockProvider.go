@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"AdminBlockchain/storage"
 	"log"
 	"net/rpc"
 )
@@ -9,7 +8,7 @@ import (
 // IBlockProvider interface for block providers
 type IBlockProvider interface {
 	GetBlockHeight() int
-	GetBlock(index int) storage.Block
+	GetBlock(index int) SignedBlockData
 }
 
 // RPCBlockProvider fetches blocks by rpc
@@ -18,8 +17,8 @@ type RPCBlockProvider struct {
 }
 
 // GetBlock gets block with specified ID
-func (bp RPCBlockProvider) GetBlock(index int) storage.Block {
-	var block storage.Block
+func (bp RPCBlockProvider) GetBlock(index int) SignedBlockData {
+	var block SignedBlockData
 	err := bp.Client.Call("BlockPropagationHandler.GetBlock", index, &block)
 	if err != nil {
 		log.Print(err)
