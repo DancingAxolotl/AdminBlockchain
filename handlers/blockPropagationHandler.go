@@ -31,7 +31,7 @@ func (bp *BlockPropagationHandler) GetBlockHeight(_, height *int) error {
 // GetBlock rpc method, returns specified block
 func (bp *BlockPropagationHandler) GetBlock(index int, block *storage.Block) error {
 	var err = bp.checkState()
-	if err == nil && index >= len(bp.Storage.Chain) {
+	if err == nil && index > len(bp.Storage.Chain) {
 		err = errors.New("Invalid index")
 	}
 

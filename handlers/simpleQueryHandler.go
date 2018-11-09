@@ -50,7 +50,7 @@ func (handler *SimpleQueryHandler) Load(path string) {
 // AcceptBlock at the top of chain
 func (handler *SimpleQueryHandler) AcceptBlock(block storage.Block) {
 	params := strings.Split(block.Data, ";")
-	if len(params) > 1 {
+	if len(params) > 0 {
 		args := make([]interface{}, len(params[1:]))
 		for i := range params[1:] {
 			args[i] = params[i]

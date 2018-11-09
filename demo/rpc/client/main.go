@@ -9,7 +9,27 @@ import (
 	"net/rpc"
 	"os"
 	"strings"
+	"time"
 )
+
+func syncClient(sync *handlers.BlockSyncHandler, rpc *handlers.RPCBlockProvider, stop chan bool) {
+	for {
+		select {
+		case <-stop:
+			return
+		default:
+			err := sync.Sync(rpc)
+			if err != nil {
+				log.Print(err)
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}
+}
+
+func stopSync(stop chan bool) {
+	stop <- true
+}
 
 func main() {
 	log.Print("Connecting...")
@@ -19,10 +39,16 @@ func main() {
 	defer client.Close()
 
 	reader := bufio.NewReader(os.Stdin)
-	handler := handlers.NewSimpleHandler("./")
-	defer handler.Close()
+	localChainHandler := handlers.NewSimpleHandler("./")
+	defer localChainHandler.Close()
 
-	fmt.Print("Available commands: test, query, execute, state, help, exit\n")
+	blockSync := handlers.BlockSyncHandler{QueryHandler: localChainHandler}
+	blockProvider := handlers.RPCBlockProvider{Client: client}
+	syncChan := make(chan bool)
+	go syncClient(&blockSync, &blockProvider, syncChan)
+	defer stopSync(syncChan)
+
+	fmt.Print("Available commands: query, execute, state, help, exit\n")
 	var running = true
 	for running {
 		fmt.Print("> ")
@@ -30,22 +56,18 @@ func main() {
 		var command string
 		fmt.Sscan(input, &command)
 		switch command {
-		case "test":
-			var temp int
-			client.Call("TestHandler.Test", 1, &temp)
-
 		case "help":
 			fmt.Print(
 				"Commands:\n" +
-					"  query \"<sql select query>\" - sends a query to the database, prints the output.\n" +
-					"  execute \"<sql statement>\" - executes an sql transaction that changes the database.\n" +
-					"  state - prints the current blockchain state.\n" +
+					"  query \"<sql select query>\" - sends a query to the database, prints the output. (local)\n" +
+					"  execute \"<sql statement>\" - executes an sql transaction that changes the database. (send to server)\n" +
+					"  state - prints the current blockchain state. (local)\n" +
 					"  help - prints this help message.\n" +
 					"  exit - exits.\n")
 
 		case "state":
 			fmt.Print(" Block id      | Previous hash    | Block hash       | Data \n")
-			for _, item := range handler.Sp.Chain {
+			for _, item := range localChainHandler.Sp.Chain {
 				fmt.Printf(" %-14d|%14.14s ...|%14.14s ...| %v\n",
 					item.ID,
 					fmt.Sprintf("% x", item.PrevHash),
@@ -57,7 +79,7 @@ func main() {
 			var query string
 			fmt.Sscanf(input, "query%q", &query)
 			var resp handlers.SimpleHandlerResponce
-			err := client.Call("SimpleQueryHandler.ExecuteQuery", handlers.SimpleHandlerRequest{Query: query, Params: []interface{}{}}, &resp)
+			err := localChainHandler.ExecuteQuery(handlers.SimpleHandlerRequest{Query: query, Params: []interface{}{}}, &resp)
 			if err == nil {
 				printTable(resp)
 			} else {

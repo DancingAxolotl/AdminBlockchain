@@ -36,7 +36,7 @@ func (blockchain *Blockchain) AddBlock(data string) {
 		hash = (*blockchain)[blockHeight-1].Hash()
 	}
 
-	*blockchain = append(*blockchain, Block{blockHeight + 1, hash, data})
+	*blockchain = append(*blockchain, Block{blockHeight, hash, data})
 }
 
 //InsertBlock attempts to insert a block at the end of the blokchain. It doesn't check if the hash of the previous block is valid.

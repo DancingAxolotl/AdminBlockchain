@@ -10,10 +10,6 @@ type BlockSyncHandler struct {
 	QueryHandler *SimpleQueryHandler
 }
 
-func (sync *BlockSyncHandler) PerformSyncRpc(rpc RPCBlockProvider) error {
-	
-}
-
 // Sync loads new blocks from a blockProvider
 func (sync *BlockSyncHandler) Sync(blockProvider IBlockProvider) error {
 	if sync.QueryHandler == nil {
@@ -22,7 +18,7 @@ func (sync *BlockSyncHandler) Sync(blockProvider IBlockProvider) error {
 
 	localHeight := len(sync.QueryHandler.Sp.Chain)
 	externalHeight := blockProvider.GetBlockHeight()
-	for localHeight != externalHeight {
+	for ; localHeight != externalHeight; localHeight++ {
 		block := blockProvider.GetBlock(localHeight)
 		err := sync.pushBlock(block)
 		if err != nil {
