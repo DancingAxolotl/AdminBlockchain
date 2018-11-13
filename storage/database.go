@@ -46,10 +46,10 @@ func (db *Database) Transact(statement string, params ...interface{}) error {
 }
 
 // Query performs a query on the database
-func (db *Database) Query(query string) (*sql.Rows, error) {
+func (db *Database) Query(query string, params ...interface{}) (*sql.Rows, error) {
 	if db.database == nil {
 		return nil, errors.New("database not loaded")
 	}
-	rows, err := db.database.Query(query)
+	rows, err := db.database.Query(query, params...)
 	return rows, err
 }

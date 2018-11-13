@@ -39,6 +39,29 @@ func (blockchain *Blockchain) AddBlock(data string) {
 	*blockchain = append(*blockchain, Block{blockHeight, hash, data})
 }
 
+// AddBlockParams adds a block to the blockchain
+func (blockchain *Blockchain) AddBlockParams(params ...interface{}) {
+	hash, blockHeight := []byte{0}, len(*blockchain)
+
+	if blockHeight > 0 {
+		hash = (*blockchain)[blockHeight-1].Hash()
+	}
+
+	var buffer bytes.Buffer
+	for i, item := range params {
+		s, ok := item.(string)
+		if ok {
+			buffer.WriteString(s)
+		} else {
+			buffer.WriteString(string(i * 17))
+		}
+		buffer.WriteString(";")
+	}
+	data := string(buffer.Bytes())
+
+	*blockchain = append(*blockchain, Block{blockHeight, hash, data})
+}
+
 //InsertBlock attempts to insert a block at the end of the blokchain. It doesn't check if the hash of the previous block is valid.
 // After inserting any amount of blocks make sure to check the validity of the chain.
 func (blockchain *Blockchain) InsertBlock(block Block) {

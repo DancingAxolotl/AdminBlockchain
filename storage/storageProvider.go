@@ -66,3 +66,13 @@ func (sp *Provider) UpdateChainState() {
 		}
 	}
 }
+
+// Close closes open databases
+func (sp *Provider) Close() {
+	if sp.ChainDb.IsOpen() {
+		log.Print("Closing storage...")
+		sp.UpdateChainState()
+		sp.ChainDb.Close()
+		sp.StateDb.Close()
+	}
+}
