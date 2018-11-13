@@ -24,22 +24,21 @@ func LoadPublicKey(path string) (SignatureValidator, error) {
 func parsePublicKey(pemBytes []byte) (SignatureValidator, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
-		return nil, errors.New("ssh: no key found")
+		return nil, errors.New("no key found")
 	}
 
-	var rawkey interface{}
+	var validator rsaPublicKey
 	switch block.Type {
 	case "PUBLIC KEY":
-		rsa, err := x509.ParsePKIXPublicKey(block.Bytes)
+		rsa, err := x509.ParsePKCS1PublicKey(block.Bytes)
 		if err != nil {
 			return nil, err
 		}
-		rawkey = rsa
+		validator = rsaPublicKey{rsa}
 	default:
-		return nil, fmt.Errorf("ssh: unsupported key type %q", block.Type)
+		return nil, fmt.Errorf("unsupported key type %q", block.Type)
 	}
-
-	return newValidatorFromKey(rawkey)
+	return &validator, nil
 }
 
 // LoadPrivateKey loads an parses a PEM encoded private key file.
@@ -54,21 +53,21 @@ func LoadPrivateKey(path string) (SignatureCreator, error) {
 func parsePrivateKey(pemBytes []byte) (SignatureCreator, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
-		return nil, errors.New("ssh: no key found")
+		return nil, errors.New("no key found")
 	}
 
-	var rawkey interface{}
+	var signer rsaPrivateKey
 	switch block.Type {
 	case "RSA PRIVATE KEY":
 		rsa, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, err
 		}
-		rawkey = rsa
+		signer = rsaPrivateKey{rsa}
 	default:
-		return nil, fmt.Errorf("ssh: unsupported key type %q", block.Type)
+		return nil, fmt.Errorf("unsupported key type %q", block.Type)
 	}
-	return newSignerFromKey(rawkey)
+	return &signer, nil
 }
 
 // SignatureCreator creates signatures from a private key.
@@ -81,28 +80,6 @@ type SignatureCreator interface {
 type SignatureValidator interface {
 	// CheckSignature checks the signature for data.
 	CheckSignature(data []byte, sig []byte) error
-}
-
-func newSignerFromKey(k interface{}) (SignatureCreator, error) {
-	var sshKey SignatureCreator
-	switch t := k.(type) {
-	case *rsa.PrivateKey:
-		sshKey = &rsaPrivateKey{t}
-	default:
-		return nil, fmt.Errorf("ssh: unsupported key type %T", k)
-	}
-	return sshKey, nil
-}
-
-func newValidatorFromKey(k interface{}) (SignatureValidator, error) {
-	var sshKey SignatureValidator
-	switch t := k.(type) {
-	case *rsa.PublicKey:
-		sshKey = &rsaPublicKey{t}
-	default:
-		return nil, fmt.Errorf("ssh: unsupported key type %T", k)
-	}
-	return sshKey, nil
 }
 
 type rsaPublicKey struct {
