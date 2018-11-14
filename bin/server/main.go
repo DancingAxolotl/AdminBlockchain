@@ -4,7 +4,24 @@ import (
 	"AdminBlockchain/handlers"
 	"AdminBlockchain/network"
 	"AdminBlockchain/utils"
+	"time"
 )
+
+func updateServerChainState(handler *handlers.BaseQueryHandler, stop chan bool) {
+	for {
+		select {
+		case <-stop:
+			return
+		default:
+			handler.Sp.UpdateChainState()
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+func stopUpdate(stop chan bool) {
+	stop <- true
+}
 
 func main() {
 	np := network.NewServerProvider()
@@ -23,6 +40,10 @@ func main() {
 		utils.LogErrorF(err)
 		accHandler.Genesis(key)
 	}
+
+	updChan := make(chan bool)
+	go updateServerChainState(baseHandler, updChan)
+	defer stopUpdate(updChan)
 
 	np.RegisterHandler(&accHandler)
 	np.RegisterHandler(&blockHandler)

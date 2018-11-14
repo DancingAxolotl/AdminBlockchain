@@ -3,6 +3,7 @@ package handlers
 import (
 	"AdminBlockchain/utils"
 	"errors"
+	"fmt"
 )
 
 // AccessLevels
@@ -30,11 +31,15 @@ type AccountHandler struct {
 // Genesis initializes the handler state for new blockchain
 func (handler *AccountHandler) Genesis(PublicKey utils.SignatureValidator) {
 	handler.ExecuteTransaction(
-		"create table Accounts (address blob primary key, personal text, level int, pkey blob)")
+		"create table Accounts (address blob, personal text, level int, pkey blob)")
 
 	accAddress := utils.Hash(PublicKey)
-	handler.ExecuteTransaction(
-		"insert into Accounts (address, personal, level, pkey) values (?, ?, ?, ?)", accAddress, "admin", AdminAccountAccess, PublicKey)
+	key, err := PublicKey.Store()
+	utils.LogErrorF(err)
+
+	err = handler.ExecuteTransaction(
+		"insert into Accounts (address, personal, level, pkey) values (?, ?, ?, ?)", accAddress, "admin", AdminAccountAccess, key)
+	utils.LogErrorF(err)
 
 }
 
@@ -61,7 +66,7 @@ func (handler *AccountHandler) CreateAccount(params CreateAccountParams, sucess 
 		accAddress,
 		params.PersonalInfo,
 		params.AccessLevel,
-		params.PubKey)
+		fmt.Sprint(params.PubKey))
 
 	return nil
 }
@@ -69,7 +74,7 @@ func (handler *AccountHandler) CreateAccount(params CreateAccountParams, sucess 
 // UpdateAccountParams for updating or creating an account
 type UpdateAccountParams struct {
 	From         Address // who adds the account
-	Acc          Address // whom to update
+	Account      Address // whom to update
 	PersonalInfo string  // personal info of the new account
 	AccessLevel  int     // access level of the new account
 	Signature    []byte  // sender signature
@@ -78,7 +83,7 @@ type UpdateAccountParams struct {
 // UpdateAccount creates an account
 func (handler *AccountHandler) UpdateAccount(params UpdateAccountParams, sucess *bool) error {
 	acc, err := handler.getAccountByAddress(params.From)
-	err = checkAdminUserSignature(acc, params.Signature, params.Acc, params.PersonalInfo, params.AccessLevel)
+	err = checkAdminUserSignature(acc, params.Signature, params.Account, params.PersonalInfo, params.AccessLevel)
 	if err != nil {
 		return err
 	}
@@ -87,7 +92,7 @@ func (handler *AccountHandler) UpdateAccount(params UpdateAccountParams, sucess 
 		"update Accounts set personal=?, level=? where address=?",
 		params.PersonalInfo,
 		params.AccessLevel,
-		params.Acc)
+		params.Account)
 
 	return nil
 }
@@ -96,10 +101,12 @@ func (handler *AccountHandler) UpdateAccount(params UpdateAccountParams, sucess 
 func (handler *AccountHandler) ListAccounts() []Account {
 	var accounts []Account
 	var acc Account
-	rows, err := handler.Sp.StateDb.Query("select * from Accounts")
-	if err != nil {
+	rows, err := handler.Sp.StateDb.Query("select address, personal, level, pkey from Accounts")
+	if err == nil {
 		for rows.Next() {
-			rows.Scan(&acc.Address, &acc.PersonalInfo, &acc.AccessLevel, &acc.PubKey)
+			pubKeyData := make([]byte, 1024)
+			rows.Scan(&acc.Address, &acc.PersonalInfo, &acc.AccessLevel, &pubKeyData)
+			acc.PubKey, err = utils.ParsePublicKey(pubKeyData)
 			accounts = append(accounts, acc)
 		}
 	}
@@ -110,10 +117,13 @@ func (handler *AccountHandler) getAccountByAddress(addr Address) (Account, error
 	var acc Account
 	rows, err := handler.Sp.StateDb.Query("select * from Accounts where address=?", addr)
 	if err != nil {
-		for rows.Next() {
-			rows.Scan(&acc.Address, &acc.PersonalInfo, &acc.AccessLevel, &acc.PubKey)
-		}
+		return acc, err
 	}
+	pubKeyData := make([]byte, 1024)
+	if rows.Next() {
+		rows.Scan(&acc.Address, &acc.PersonalInfo, &acc.AccessLevel, &pubKeyData)
+	}
+	acc.PubKey, err = utils.ParsePublicKey(pubKeyData)
 	return acc, err
 }
 

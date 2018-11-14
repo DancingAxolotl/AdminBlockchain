@@ -16,7 +16,6 @@ import (
 func LoadPublicKey(path string) (SignatureValidator, error) {
 	dat, err := ioutil.ReadFile(path)
 	LogErrorF(err)
-
 	return parsePublicKey(dat)
 }
 
@@ -27,25 +26,18 @@ func parsePublicKey(pemBytes []byte) (SignatureValidator, error) {
 		return nil, errors.New("no key found")
 	}
 
-	var validator rsaPublicKey
 	switch block.Type {
 	case "PUBLIC KEY":
-		rsa, err := x509.ParsePKCS1PublicKey(block.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		validator = rsaPublicKey{rsa}
+		return ParsePublicKey(block.Bytes)
 	default:
-		return nil, fmt.Errorf("unsupported key type %q", block.Type)
+		return nil, fmt.Errorf("unsupported key block type %q", block.Type)
 	}
-	return &validator, nil
 }
 
 // LoadPrivateKey loads an parses a PEM encoded private key file.
 func LoadPrivateKey(path string) (SignatureCreator, error) {
 	dat, err := ioutil.ReadFile(path)
 	LogErrorF(err)
-
 	return parsePrivateKey(dat)
 }
 
@@ -80,6 +72,7 @@ type SignatureCreator interface {
 type SignatureValidator interface {
 	// CheckSignature checks the signature for data.
 	CheckSignature(data []byte, sig []byte) error
+	Store() ([]byte, error)
 }
 
 type rsaPublicKey struct {
@@ -104,4 +97,19 @@ func (r *rsaPublicKey) CheckSignature(message []byte, sig []byte) error {
 	h.Write(message)
 	d := h.Sum(nil)
 	return rsa.VerifyPKCS1v15(r.PublicKey, crypto.SHA256, d, sig)
+}
+
+// Store prepares key for storage
+func (r *rsaPublicKey) Store() ([]byte, error) {
+	return x509.MarshalPKIXPublicKey(r.PublicKey)
+}
+
+// ParsePublicKey read key from raw storage
+func ParsePublicKey(data []byte) (SignatureValidator, error) {
+	tmpKey, err := x509.ParsePKIXPublicKey(data)
+	rsaKey, ok := tmpKey.(*rsa.PublicKey)
+	if err != nil || !ok {
+		return nil, errors.New("invalid key type, only RSA is supported")
+	}
+	return &rsaPublicKey{rsaKey}, nil
 }
