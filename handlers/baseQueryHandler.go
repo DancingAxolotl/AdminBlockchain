@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"AdminBlockchain/storage"
+	"AdminBlockchain/utils"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -37,8 +39,16 @@ func (handler *BaseQueryHandler) AcceptBlock(block storage.Block) {
 	params := strings.Split(block.Data, ";")
 	if len(params) > 0 {
 		args := make([]interface{}, len(params[1:]))
-		for i := range params[1:] {
-			args[i] = params[i]
+		for i := 0; i < len(args); i++ {
+			var rawData string
+			n, _ := fmt.Sscanf(params[i+1], "{raw}%s{raw}", &rawData)
+			if n == 1 {
+				data, err := base64.StdEncoding.DecodeString(rawData[:len(rawData)-5])
+				utils.LogErrorF(err)
+				args[i] = data
+			} else {
+				args[i] = params[i+1]
+			}
 		}
 		handler.Sp.StateDb.Transact(params[0], args...)
 	}
@@ -85,7 +95,13 @@ func (handler *BaseQueryHandler) ExecuteTransaction(query string, params ...inte
 
 	txData := query
 	for _, param := range params {
-		txData += fmt.Sprintf(";%v", param)
+		switch param.(type) {
+		case []byte:
+			bytes := param.([]byte)
+			txData += fmt.Sprintf(";{raw}%v{raw}", base64.StdEncoding.EncodeToString(bytes))
+		default:
+			txData += fmt.Sprintf(";%v", param)
+		}
 	}
 
 	handler.Sp.Chain.AddBlock(txData)

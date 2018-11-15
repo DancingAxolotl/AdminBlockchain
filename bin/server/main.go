@@ -4,30 +4,29 @@ import (
 	"AdminBlockchain/handlers"
 	"AdminBlockchain/network"
 	"AdminBlockchain/utils"
-	"time"
+	"os"
+	"os/signal"
 )
 
-func updateServerChainState(handler *handlers.BaseQueryHandler, stop chan bool) {
-	for {
-		select {
-		case <-stop:
-			return
-		default:
-			handler.Sp.UpdateChainState()
-			time.Sleep(5 * time.Second)
-		}
-	}
-}
+var (
+	np          network.ServerNetworkProvider
+	baseHandler *handlers.BaseQueryHandler
+)
 
-func stopUpdate(stop chan bool) {
-	stop <- true
+func handleStop() {
+	sigchan := make(chan os.Signal, 10)
+	signal.Notify(sigchan, os.Interrupt)
+	<-sigchan
+
+	np.Stop()
+	baseHandler.Close()
+
+	os.Exit(0)
 }
 
 func main() {
-	np := network.NewServerProvider()
-	defer np.Stop()
-	baseHandler := handlers.NewBaseHandler("./")
-	defer baseHandler.Close()
+	np = network.NewServerProvider()
+	baseHandler = handlers.NewBaseHandler("./")
 
 	key, err := utils.LoadPrivateKey("./private.pem")
 	utils.LogErrorF(err)
@@ -41,12 +40,8 @@ func main() {
 		accHandler.Genesis(key)
 	}
 
-	updChan := make(chan bool)
-	go updateServerChainState(baseHandler, updChan)
-	defer stopUpdate(updChan)
-
 	np.RegisterHandler(&accHandler)
 	np.RegisterHandler(&blockHandler)
-
+	go handleStop()
 	np.Start("", "8900")
 }

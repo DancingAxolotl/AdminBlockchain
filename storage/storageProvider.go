@@ -48,7 +48,7 @@ func (sp *Provider) LoadChain(DbPath string) {
 
 //UpdateChainState writes the current blockchain into the database
 func (sp *Provider) UpdateChainState() {
-	rows, err := sp.ChainDb.Query("SELECT MAX(id) FROM ChainState")
+	rows, err := sp.ChainDb.Query("SELECT COUNT(*) FROM ChainState")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,11 +58,12 @@ func (sp *Provider) UpdateChainState() {
 		rows.Scan(&count)
 	}
 	rows.Close()
-
-	for _, item := range sp.Chain[count:] {
-		err = sp.ChainDb.Transact("INSERT INTO ChainState (id, hash, data) VALUES (?, ?, ?)", item.ID, item.PrevHash, item.Data)
-		if err != nil {
-			log.Print(err)
+	if count < len(sp.Chain) {
+		for _, item := range sp.Chain[count:] {
+			err = sp.ChainDb.Transact("INSERT INTO ChainState (id, hash, data) VALUES (?, ?, ?)", item.ID, item.PrevHash, item.Data)
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	}
 }

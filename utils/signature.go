@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/gob"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 
 // LoadPublicKey loads an parses a PEM encoded private key file.
 func LoadPublicKey(path string) (SignatureValidator, error) {
+	gob.Register(rsaPublicKey{})
 	dat, err := ioutil.ReadFile(path)
 	LogErrorF(err)
 	return parsePublicKey(dat)
@@ -21,6 +23,7 @@ func LoadPublicKey(path string) (SignatureValidator, error) {
 
 // parsePublicKey parses a PEM encoded private key.
 func parsePublicKey(pemBytes []byte) (SignatureValidator, error) {
+	gob.Register(rsaPrivateKey{})
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
 		return nil, errors.New("no key found")

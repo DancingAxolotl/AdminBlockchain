@@ -2,15 +2,12 @@ package main
 
 import (
 	"AdminBlockchain/handlers"
-	"AdminBlockchain/handlers/sample"
 	"AdminBlockchain/utils"
-	//"bufio"
-	//"os"
-	"encoding/hex"
+	"bufio"
 	"fmt"
 	"log"
 	"net/rpc"
-	"strings"
+	"os"
 	"time"
 )
 
@@ -64,18 +61,20 @@ func main() {
 	go syncClient(&blockSync, &blockProvider, syncChan)
 	defer stopSync(syncChan)
 
+	// Load client keys
 	clientKey, err = utils.LoadPrivateKey("./private.pem")
 	utils.LogErrorF(err)
-	clientAddress = utils.Hash(utils.LoadPublicKey("./public.pem"))
+	tmpKey, err := utils.LoadPublicKey("./public.pem")
+	utils.LogErrorF(err)
+	clientAddress = handlers.GetAddressFromPubKey(tmpKey)
 
 	// Start input loop
-	//reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Available commands: accounts, state, help, exit\n")
 	var running = true
 	for running {
 		fmt.Print("> ")
-		//input, _ := reader.ReadString('\n')
-		input := "accounts get"
+		input, _ := reader.ReadString('\n')
 		var command string
 		fmt.Sscan(input, &command)
 		switch command {
@@ -118,16 +117,15 @@ func handleAccounts(input string) {
 		accounts := accountHandler.ListAccounts()
 		fmt.Printf(" Address        | Personal info    | Access level\n")
 		for _, account := range accounts {
-			var accessLvl, tmp string
+			var accessLvl string
 			if account.AccessLevel == handlers.BasicAccountAccess {
 				accessLvl = "basic"
 			} else {
 				accessLvl = "admin"
 			}
-			tmp = account.PersonalInfo
-			fmt.Printf(" %14.14s | %s | %s\n",
-				fmt.Sprintf("%x", account.Address),
-				tmp,
+			fmt.Printf(" %14.14s | %16.16s | %11.11s\n",
+				account.Address,
+				account.PersonalInfo,
 				accessLvl)
 		}
 	case "create":
@@ -136,39 +134,32 @@ func handleAccounts(input string) {
 		fmt.Sscanf(input, "accounts create %q %q %d", &pubKeyPath, &personalInfo, &access)
 		publicKey, err := utils.LoadPublicKey(pubKeyPath)
 		utils.LogErrorF(err)
-		signature, err := clientKey.Sign(utils.Hash(personalInfo, access, publicKey))
+		pubKeyData, err := publicKey.Store()
+		utils.LogErrorF(err)
+		signature, err := clientKey.Sign(utils.Hash(personalInfo, access, pubKeyData))
 		utils.LogErrorF(err)
 
 		err = client.Call("AccountHandler.CreateAccount", handlers.CreateAccountParams{
 			From:         clientAddress,
 			PersonalInfo: personalInfo,
 			AccessLevel:  access,
-			PubKey:       publicKey,
+			PubKey:       pubKeyData,
 			Signature:    signature}, nil)
 		utils.LogErrorF(err)
 
 	case "update":
 		var addressStr, personalInfo string
 		var access int
-		fmt.Sscanf(input, "accounts update %q %q %d", &addressStr, &personalInfo, &access)
-		address, err := hex.DecodeString(addressStr)
-		utils.LogErrorF(err)
-		signature, err := clientKey.Sign(utils.Hash(address, personalInfo, access))
+		fmt.Sscanf(input, "accounts update %s %q %d", &addressStr, &personalInfo, &access)
+		signature, err := clientKey.Sign(utils.Hash(addressStr, personalInfo, access))
 		utils.LogErrorF(err)
 
 		err = client.Call("AccountHandler.UpdateAccount", handlers.UpdateAccountParams{
 			From:         clientAddress,
-			Account:      address,
+			Account:      handlers.Address(addressStr),
 			PersonalInfo: personalInfo,
 			AccessLevel:  access,
 			Signature:    signature}, nil)
 		utils.LogErrorF(err)
-	}
-}
-
-func printTable(resp sample.SimpleHandlerResponce) {
-	fmt.Printf("%v\n", strings.Join(resp.Columns, "\t|"))
-	for _, row := range resp.Rows {
-		fmt.Printf("%v\n", strings.Join(row, "\t|"))
 	}
 }
