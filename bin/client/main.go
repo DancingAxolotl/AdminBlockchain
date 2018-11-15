@@ -86,17 +86,17 @@ func main() {
 					"  accounts - manage user accounts\n" +
 					"    get - list all current accounts (local)\n" +
 					"    create <path to public key> <personal info> <access level> - create a new user account. By default access level is basic.\n" +
-					"    update <address> <personal info> <access level> - update data about user accountn" +
-					"  contracts - manage contracts" +
-					"    get - list all contracts" +
-					"    getmy - list user contracts" +
-					"    create <assignee> <info> <reward> - create a new contract" +
-					"    update <id> <assignee> <info> <reward> - create a new contract" +
-					"    sign <id> - sign the contract" +
-					"    start <id> - start progress on the contract" +
-					"    resolve <id> - resolve the contract" +
-					"    accept <id> <accepted> - acceptance of the contract" +
-					"  balance - prints users balance" +
+					"    update <address> <personal info> <access level> - update data about user accountn\n" +
+					"  contracts - manage contracts\n" +
+					"    get - list all contracts\n" +
+					"    getmy - list user contracts\n" +
+					"    create <assignee> <info> <reward> - create a new contract\n" +
+					"    update <id> <assignee> <info> <reward> - create a new contract\n" +
+					"    sign <id> - sign the contract\n" +
+					"    start <id> - start progress on the contract\n" +
+					"    resolve <id> - resolve the contract\n" +
+					"    accept <id> <accepted> - acceptance of the contract\n" +
+					"  balance - prints users balance\n" +
 					"  state - prints the current blockchain state. (local)\n" +
 					"  help - prints this help message.\n" +
 					"  exit - exits.\n")
@@ -120,7 +120,7 @@ func main() {
 		case "balance":
 			balance, err := contractHandler.GetBalance(clientAddress, false)
 			utils.LogError(err)
-			fmt.Printf("Balance of user %v is %v", clientAddress, balance)
+			fmt.Printf("Balance of user %v is %v\n", clientAddress, balance)
 
 		case "exit":
 			running = false
@@ -284,9 +284,9 @@ func handleContracts(input string) {
 }
 
 func printContracts(contracts []handlers.Contract) {
-	fmt.Printf(" ID | Reporter        | Assignee        | Info           | Status | Reward \n")
+	fmt.Printf(" ID | Reporter       | Assignee         | Info             | Status | Reward \n")
 	for _, item := range contracts {
-		fmt.Printf(" %2.d | %14.14s | %16.16s | %16.16s | %d | %d \n",
+		fmt.Printf(" %2.d | %14.14s | %16.16s | %16.16s | %6.d | %d \n",
 			item.ID,
 			item.Reporter,
 			item.Assignee,
