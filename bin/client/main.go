@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	clientKey      utils.SignatureCreator
-	clientAddress  handlers.Address
-	accountHandler handlers.AccountHandler
-	client         *rpc.Client
+	clientKey       utils.SignatureCreator
+	clientAddress   handlers.Address
+	accountHandler  handlers.AccountHandler
+	contractHandler handlers.ContractHandler
+	client          *rpc.Client
 )
 
 func syncClient(sync *handlers.BlockSyncHandler, rpc *handlers.RPCBlockProvider, stop chan bool) {
@@ -50,6 +51,7 @@ func main() {
 	defer baseHandler.Close()
 	// Define handlers
 	accountHandler = handlers.AccountHandler{BaseQueryHandler: baseHandler}
+	contractHandler = handlers.ContractHandler{BaseQueryHandler: baseHandler, Accounts: &accountHandler}
 
 	// Set up block synchronization
 	serverKey, err := utils.LoadPublicKey("./server.pem")
@@ -70,7 +72,7 @@ func main() {
 
 	// Start input loop
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Available commands: accounts, state, help, exit\n")
+	fmt.Print("Available commands: accounts, contracts, balance, state, help, exit\n")
 	var running = true
 	for running {
 		fmt.Print("> ")
@@ -85,6 +87,16 @@ func main() {
 					"    get - list all current accounts (local)\n" +
 					"    create <path to public key> <personal info> <access level> - create a new user account. By default access level is basic.\n" +
 					"    update <address> <personal info> <access level> - update data about user accountn" +
+					"  contracts - manage contracts" +
+					"    get - list all contracts" +
+					"    getmy - list user contracts" +
+					"    create <assignee> <info> <reward> - create a new contract" +
+					"    update <id> <assignee> <info> <reward> - create a new contract" +
+					"    sign <id> - sign the contract" +
+					"    start <id> - start progress on the contract" +
+					"    resolve <id> - resolve the contract" +
+					"    accept <id> <accepted> - acceptance of the contract" +
+					"  balance - prints users balance" +
 					"  state - prints the current blockchain state. (local)\n" +
 					"  help - prints this help message.\n" +
 					"  exit - exits.\n")
@@ -101,6 +113,14 @@ func main() {
 
 		case "accounts":
 			handleAccounts(input)
+
+		case "contracts":
+			handleContracts(input)
+
+		case "balance":
+			balance, err := contractHandler.GetBalance(clientAddress, false)
+			utils.LogError(err)
+			fmt.Printf("Balance of user %v is %v", clientAddress, balance)
 
 		case "exit":
 			running = false
@@ -161,5 +181,117 @@ func handleAccounts(input string) {
 			AccessLevel:  access,
 			Signature:    signature}, nil)
 		utils.LogErrorF(err)
+	}
+}
+
+func handleContracts(input string) {
+	var command string
+	fmt.Sscanf(input, "contracts %s", &command)
+	switch command {
+	case "get":
+		contracts, err := contractHandler.GetAllContracts()
+		utils.LogError(err)
+		printContracts(contracts)
+	case "getmy":
+		contracts, err := contractHandler.GetContractsOfUser(clientAddress)
+		utils.LogError(err)
+		printContracts(contracts)
+	case "create":
+		var Assignee, ContractInfo string
+		var Reward int
+		fmt.Sscanf(input, "contracts create %q %q %d", &Assignee, &ContractInfo, &Reward)
+		signature, err := clientKey.Sign(utils.Hash(Assignee, ContractInfo, Reward))
+		utils.LogErrorF(err)
+		var contractID int64
+		err = client.Call("ContractHandler.Create", handlers.CreateContractParams{
+			From:         clientAddress,
+			Assignee:     handlers.Address(Assignee),
+			ContractInfo: ContractInfo,
+			Reward:       Reward,
+			Signature:    signature}, &contractID)
+		utils.LogError(err)
+		if err == nil {
+			fmt.Printf("Contract created - %v", contractID)
+		}
+
+	case "update":
+		var Assignee, ContractInfo string
+		var Reward int
+		var ID int64
+		fmt.Sscanf(input, "contracts update %d %q %q %d", &ID, &Assignee, &ContractInfo, &Reward)
+		signature, err := clientKey.Sign(utils.Hash(ID, Assignee, ContractInfo, Reward))
+		utils.LogErrorF(err)
+		var tmp bool
+		err = client.Call("ContractHandler.Update", handlers.UpdateContractParams{
+			ContractID:   ID,
+			From:         clientAddress,
+			Assignee:     handlers.Address(Assignee),
+			ContractInfo: ContractInfo,
+			Reward:       Reward,
+			Signature:    signature}, &tmp)
+		utils.LogError(err)
+
+	case "sign":
+		var ID int64
+		fmt.Sscanf(input, "contracts sign %d", &ID)
+		signature, err := clientKey.Sign(utils.Hash(ID))
+		utils.LogErrorF(err)
+		var tmp bool
+		err = client.Call("ContractHandler.Sign", handlers.ContractStateParams{
+			ContractID: ID,
+			From:       clientAddress,
+			Signature:  signature}, &tmp)
+		utils.LogError(err)
+
+	case "start":
+		var ID int64
+		fmt.Sscanf(input, "contracts start %d", &ID)
+		signature, err := clientKey.Sign(utils.Hash(ID))
+		utils.LogErrorF(err)
+		var tmp bool
+		err = client.Call("ContractHandler.StartProgress", handlers.ContractStateParams{
+			ContractID: ID,
+			From:       clientAddress,
+			Signature:  signature}, &tmp)
+		utils.LogError(err)
+
+	case "resolve":
+		var ID int64
+		fmt.Sscanf(input, "contracts resolve %d", &ID)
+		signature, err := clientKey.Sign(utils.Hash(ID))
+		utils.LogErrorF(err)
+		var tmp bool
+		err = client.Call("ContractHandler.Resolve", handlers.ContractStateParams{
+			ContractID: ID,
+			From:       clientAddress,
+			Signature:  signature}, &tmp)
+		utils.LogError(err)
+
+	case "accept":
+		var ID int64
+		var success bool
+		fmt.Sscanf(input, "contracts accept %d %t", &ID, &success)
+		signature, err := clientKey.Sign(utils.Hash(ID, success))
+		utils.LogErrorF(err)
+		var tmp bool
+		err = client.Call("ContractHandler.Acceptance", handlers.ContractAcceptanceParams{
+			ContractID: ID,
+			From:       clientAddress,
+			Success:    success,
+			Signature:  signature}, &tmp)
+		utils.LogError(err)
+	}
+}
+
+func printContracts(contracts []handlers.Contract) {
+	fmt.Printf(" ID | Reporter        | Assignee        | Info           | Status | Reward \n")
+	for _, item := range contracts {
+		fmt.Printf(" %2.d | %14.14s | %16.16s | %16.16s | %d | %d \n",
+			item.ID,
+			item.Reporter,
+			item.Assignee,
+			item.ContractInfo,
+			item.Status,
+			item.Reward)
 	}
 }

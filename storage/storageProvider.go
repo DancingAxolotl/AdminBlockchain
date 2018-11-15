@@ -60,7 +60,7 @@ func (sp *Provider) UpdateChainState() {
 	rows.Close()
 	if count < len(sp.Chain) {
 		for _, item := range sp.Chain[count:] {
-			err = sp.ChainDb.Transact("INSERT INTO ChainState (id, hash, data) VALUES (?, ?, ?)", item.ID, item.PrevHash, item.Data)
+			_, err = sp.ChainDb.Transact("INSERT INTO ChainState (id, hash, data) VALUES (?, ?, ?)", item.ID, item.PrevHash, item.Data)
 			if err != nil {
 				log.Print(err)
 			}

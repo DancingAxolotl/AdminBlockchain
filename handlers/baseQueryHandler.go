@@ -87,10 +87,10 @@ func (handler *BaseQueryHandler) ExecuteQuery(query string, params ...interface{
 }
 
 //ExecuteTransaction performs a transaction and stores it in the blockchain
-func (handler *BaseQueryHandler) ExecuteTransaction(query string, params ...interface{}) error {
-	err := handler.Sp.StateDb.Transact(query, params...)
+func (handler *BaseQueryHandler) ExecuteTransaction(query string, params ...interface{}) (int64, error) {
+	inserted, err := handler.Sp.StateDb.Transact(query, params...)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	txData := query
@@ -105,7 +105,7 @@ func (handler *BaseQueryHandler) ExecuteTransaction(query string, params ...inte
 	}
 
 	handler.Sp.Chain.AddBlock(txData)
-	return nil
+	return inserted, nil
 }
 
 //Close saves the state database and closes the connection

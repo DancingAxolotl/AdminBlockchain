@@ -37,7 +37,7 @@ func (handler *AccountHandler) Genesis(PublicKey utils.SignatureValidator) {
 	key, err := PublicKey.Store()
 	utils.LogErrorF(err)
 
-	err = handler.ExecuteTransaction(
+	_, err = handler.ExecuteTransaction(
 		"insert into Accounts (address, personal, level, pkey) values (?, ?, ?, ?)", accAddress, "admin", AdminAccountAccess, key)
 	utils.LogErrorF(err)
 }
@@ -67,7 +67,7 @@ func (handler *AccountHandler) CreateAccount(params CreateAccountParams, sucess 
 	}
 
 	accAddress := GetAddressFromPubKey(key)
-	err = handler.ExecuteTransaction(
+	_, err = handler.ExecuteTransaction(
 		"insert into Accounts (address, personal, level, pkey) values (?, ?, ?, ?)",
 		accAddress,
 		params.PersonalInfo,

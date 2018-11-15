@@ -42,14 +42,18 @@ func (db *Database) IsOpen() bool {
 }
 
 // Transact performs a transaction on the database
-func (db *Database) Transact(statement string, params ...interface{}) error {
+func (db *Database) Transact(statement string, params ...interface{}) (int64, error) {
 	if !db.IsOpen() {
-		return errors.New("database not loaded")
+		return -1, errors.New("database not loaded")
 	}
 	db.mutex.Lock()
-	_, err := db.database.Exec(statement, params...)
+	res, err := db.database.Exec(statement, params...)
+	if err != nil {
+		return -1, err
+	}
+	last, err := res.LastInsertId()
 	db.mutex.Unlock()
-	return err
+	return last, err
 }
 
 // Query performs a query on the database
